@@ -1,0 +1,14 @@
+---
+description: Design and style every screen mobile first
+alwaysApply: true
+---
+
+# Mobile first
+
+Design every page and component for a phone first. Enhance larger screens only with `min-width` media queries.
+
+- Base styles target about 320–430px: full width, 16px body text, at least 44px tap targets, and padding that includes `env(safe-area-inset-*)`.
+- Do not set desktop widths, multi-column layouts, or large type in the base styles.
+- Add layout changes at `min-width: 48rem` and up.
+- Put hover effects inside `@media (hover: hover) and (pointer: fine)`.
+- Keep `meta viewport` at `width=device-width, initial-scale=1`.

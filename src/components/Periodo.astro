@@ -1,0 +1,125 @@
+---
+const meses = [
+	"Enero",
+	"Febrero",
+	"Marzo",
+	"Abril",
+	"Mayo",
+	"Junio",
+	"Julio",
+	"Agosto",
+	"Septiembre",
+	"Octubre",
+	"Noviembre",
+	"Diciembre",
+];
+const anios = [2024, 2025, 2026];
+const ahora = new Date();
+const anioActual = anios.includes(ahora.getFullYear()) ? ahora.getFullYear() : anios[anios.length - 1];
+---
+
+<form class="periodo" data-periodo>
+	<fieldset>
+		<legend>Mes a cargar</legend>
+		<div class="campos">
+			<label>
+				Mes
+				<select name="mes">
+					{
+						meses.map((nombre, indice) => (
+							<option value={indice + 1} selected={indice + 1 === ahora.getMonth() + 1}>
+								{nombre}
+							</option>
+						))
+					}
+				</select>
+			</label>
+			<label>
+				Año
+				<select name="anio">
+					{
+						anios.map((anio) => (
+							<option value={anio} selected={anio === anioActual}>
+								{anio}
+							</option>
+						))
+					}
+				</select>
+			</label>
+		</div>
+	</fieldset>
+</form>
+
+<script>
+	import { guardarPeriodo, leerPeriodo, periodoValido } from "../lib/periodo";
+
+	const form = document.querySelector("[data-periodo]");
+	if (form instanceof HTMLFormElement) {
+		const mes = form.elements.namedItem("mes");
+		const anio = form.elements.namedItem("anio");
+		if (mes instanceof HTMLSelectElement && anio instanceof HTMLSelectElement) {
+			const actual = leerPeriodo();
+			mes.value = String(actual.mes);
+			anio.value = String(actual.anio);
+			form.addEventListener("change", () => {
+				const periodo = { anio: Number(anio.value), mes: Number(mes.value) };
+				if (periodoValido(periodo)) guardarPeriodo(periodo);
+			});
+		}
+	}
+</script>
+
+<style>
+	.periodo {
+		margin: 0 0 1.5rem;
+	}
+
+	fieldset {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+
+	legend {
+		margin-bottom: 0.75rem;
+		padding: 0;
+		font-size: 1.15rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.campos {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	label {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 1rem;
+		font-weight: 650;
+	}
+
+	select {
+		width: 100%;
+		min-height: 3rem;
+		padding: 0.75rem 0.9rem;
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		background: #fff;
+		color: inherit;
+		font: inherit;
+		font-weight: 450;
+	}
+
+	select:focus-visible {
+		outline: 3px solid var(--forest);
+		outline-offset: 3px;
+	}
+
+	@media (min-width: 48rem) {
+		.campos {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+</style>

@@ -1,0 +1,104 @@
+---
+import "../styles/global.css";
+
+const { title } = Astro.props;
+const year = new Date().getFullYear();
+---
+
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.png" />
+		<link rel="icon" href="/favicon.png" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<title>{title}</title>
+	</head>
+	<body>
+		<header class="site-header">
+			<a class="brand" href="/">
+				<img src="/favicon.png" alt="" width="60" height="60" />
+				<span>
+					<span class="brand-muni">Ciudad de San Benito</span>
+					<span class="brand-app">Obras Públicas</span>
+				</span>
+			</a>
+		</header>
+		<slot />
+		<footer class="site-footer">
+			<div class="footer-main">
+				<div class="footer-brand">
+					<img src="/favicon.png" alt="Logo Municipalidad de San Benito" width="96" height="96" />
+					<p>Municipalidad de San Benito, trabajando por el progreso de nuestra ciudad</p>
+				</div>
+				<div>
+					<h2>Contacto</h2>
+					<ul class="contacto">
+						<li>
+							<a href="https://wa.me/543436127013">
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"></path>
+								</svg>
+								CAV: 3436127013
+							</a>
+						</li>
+						<li>
+							<a href="mailto:presidencia@munisanbenito.gov.ar">
+								<svg viewBox="0 0 24 24" aria-hidden="true">
+									<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+									<path d="M3 7l9 6 9-6"></path>
+								</svg>
+								presidencia@munisanbenito.gov.ar
+							</a>
+						</li>
+						<li>
+							Bvad, Basavilbaso 1094<br />
+							San Benito, Entre Ríos
+						</li>
+					</ul>
+				</div>
+				<div>
+					<h2>Seguinos</h2>
+					<div class="social">
+						<a
+							href="https://www.facebook.com/MunicipalidadDeSanBenito"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="Facebook"
+						>
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M7 10v4h3v7h4v-7h3l1-4h-4V8a1 1 0 0 1 1-1h3V3h-3a5 5 0 0 0-5 5v2z"></path>
+							</svg>
+						</a>
+						<a
+							href="https://www.instagram.com/municipio_sanbenito"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="Instagram"
+						>
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M4 8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4z"></path>
+								<path d="M9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0"></path>
+								<path d="M16.5 7.5v.01"></path>
+							</svg>
+						</a>
+						<a
+							href="https://www.youtube.com/@MunicipalidadSanBenito"
+							target="_blank"
+							rel="noopener noreferrer"
+							aria-label="YouTube"
+						>
+							<svg viewBox="0 0 24 24" aria-hidden="true">
+								<path d="M2 8a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v8a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4z"></path>
+								<path d="M10 9l5 3-5 3z"></path>
+							</svg>
+						</a>
+					</div>
+				</div>
+			</div>
+			<div class="footer-copy">
+				<p>© {year} Municipalidad de San Benito. Todos los derechos reservados.</p>
+			</div>
+		</footer>
+	</body>
+</html>

@@ -1,0 +1,17 @@
+---
+import Enviar from "../components/Enviar.astro";
+import Periodo from "../components/Periodo.astro";
+import Base from "./Base.astro";
+
+const { title, accent } = Astro.props;
+---
+
+<Base title={title}>
+	<main class="page" style={`--accent: ${accent}`}>
+		<a class="back" href="/">← Obras Públicas</a>
+		<h1>{title}</h1>
+		<Periodo />
+		<slot />
+		<Enviar />
+	</main>
+</Base>
