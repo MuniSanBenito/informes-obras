@@ -1,0 +1,90 @@
+---
+import { areas } from "../../data/informes";
+import Area from "../../layouts/Area.astro";
+
+export function getStaticPaths() {
+	return areas.map((area) => ({
+		params: { area: area.id },
+		props: { area },
+	}));
+}
+
+const { area } = Astro.props;
+---
+
+<Area title={area.titulo} accent="#076633">
+	<section aria-labelledby="tipos-titulo">
+		<h2 id="tipos-titulo">Informes</h2>
+		<nav aria-label={`Informes de ${area.titulo}`}>
+			{
+				area.informes.map((informe) => (
+					<a class="tipo" href={`/${area.id}/${informe.id}`}>
+						<span class="label">{informe.titulo}</span>
+						<span class="resumen">{informe.resumen}</span>
+					</a>
+				))
+			}
+		</nav>
+	</section>
+</Area>
+
+<style>
+	h2 {
+		margin: 0 0 0.75rem;
+		font-size: 1.25rem;
+		line-height: 1.2;
+	}
+
+	nav {
+		display: grid;
+		gap: 0.75rem;
+	}
+
+	.tipo {
+		display: grid;
+		gap: 0.25rem;
+		width: 100%;
+		min-height: 4.5rem;
+		padding: 1rem 1.1rem;
+		border: 1px solid var(--line);
+		border-radius: 12px;
+		background: #fff;
+		color: var(--ink);
+		text-decoration: none;
+		box-shadow: var(--shadow);
+	}
+
+	.label {
+		font-size: 1.15rem;
+		font-weight: 700;
+		line-height: 1.2;
+	}
+
+	.resumen {
+		font-size: 1rem;
+		line-height: 1.35;
+	}
+
+	.tipo:focus-visible {
+		outline: 3px solid var(--forest);
+		outline-offset: 3px;
+	}
+
+	@media (min-width: 48rem) {
+		h2 {
+			margin-bottom: 1rem;
+			font-size: 1.5rem;
+		}
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.tipo {
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.tipo:hover {
+			transform: scale(1.02);
+			box-shadow: 0 16px 32px rgb(0 0 0 / 14%);
+		}
+	}
+</style>

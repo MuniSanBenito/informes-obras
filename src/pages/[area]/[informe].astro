@@ -1,0 +1,20 @@
+---
+import Informe from "../../components/Informe.astro";
+import { areas } from "../../data/informes";
+import Area from "../../layouts/Area.astro";
+
+export function getStaticPaths() {
+	return areas.flatMap((area) =>
+		area.informes.map((informe) => ({
+			params: { area: area.id, informe: informe.id },
+			props: { area, informe },
+		})),
+	);
+}
+
+const { area, informe } = Astro.props;
+---
+
+<Area title={informe.titulo} accent="#076633" back={`/${area.id}`} backLabel={area.titulo}>
+	<Informe areaId={area.id} areaTitulo={area.titulo} informe={informe} />
+</Area>

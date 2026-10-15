@@ -1,33 +1,13 @@
 ---
 import Base from "../layouts/Base.astro";
 
-const areas = [
-	{
-		title: "Obras Sanitarias",
-		href: "/obras-sanitarias",
-		tone: "sanitarias",
-	},
-	{
-		title: "Obras Viales",
-		href: "/obras-viales",
-		tone: "viales",
-	},
-	{
-		title: "Alumbrado Público",
-		href: "/alumbrado-publico",
-		tone: "alumbrado",
-	},
-	{
-		title: "Obras Civiles",
-		href: "/obras-civiles",
-		tone: "civiles",
-	},
-	{
-		title: "Higiene Urbana y espacios verdes",
-		href: "/higiene-urbana",
-		tone: "higiene",
-	},
-];
+import { areas as catalogo } from "../data/informes";
+
+const areas = catalogo.map((area) => ({
+	title: area.titulo,
+	href: `/${area.id}`,
+	tone: area.tone,
+}));
 ---
 
 <Base title="Obras Públicas">
@@ -41,11 +21,6 @@ const areas = [
 				areas.map((area) => (
 					<a class={`area ${area.tone}`} href={area.href}>
 						<span class="symbol" aria-hidden="true">
-							{area.tone === "sanitarias" && (
-								<svg viewBox="0 0 24 24">
-									<path d="M12 2.4c.8 2.2 5.8 7.2 5.8 11a5.8 5.8 0 0 1-11.6 0c0-3.8 5-8.8 5.8-11z" />
-								</svg>
-							)}
 							{area.tone === "viales" && (
 								<svg viewBox="0 0 24 24">
 									<path d="M8 3h8l5 18H3z" />
@@ -56,14 +31,14 @@ const areas = [
 									<path d="M9 21h6v-2h-6zm.2-3.2h5.6v-1.2A6.2 6.2 0 1 0 9.2 16.6z" />
 								</svg>
 							)}
+							{area.tone === "parques" && (
+								<svg viewBox="0 0 24 24">
+									<path d="M5.2 18.6C6 11 11.2 6 19.4 4.6 17.6 13 12.4 18.2 5.2 18.6z" />
+								</svg>
+							)}
 							{area.tone === "civiles" && (
 								<svg viewBox="0 0 24 24">
 									<path d="M4 20.5V10L12 3.5 20 10v10.5z" />
-								</svg>
-							)}
-							{area.tone === "higiene" && (
-								<svg viewBox="0 0 24 24">
-									<path d="M5.2 18.6C6 11 11.2 6 19.4 4.6 17.6 13 12.4 18.2 5.2 18.6z" />
 								</svg>
 							)}
 						</span>
