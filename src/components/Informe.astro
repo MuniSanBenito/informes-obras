@@ -1,287 +1,240 @@
 ---
-import type { TipoInforme } from "../data/informes";
-import { claveInforme } from "../data/informes";
-import { urlPestana } from "../lib/planilla";
+import { nombresDe } from "../data/catalogos";
+import { claveInforme, type Campo, type TipoInforme } from "../data/informes";
+import { PLANILLA_URL } from "../lib/planilla";
 import Periodo from "./Periodo.astro";
 
-const { areaId, areaTitulo, informe } = Astro.props as {
+interface Props {
 	areaId: string;
 	areaTitulo: string;
 	informe: TipoInforme;
-};
+}
+
+const { areaId, areaTitulo, informe } = Astro.props;
+const primerModo = informe.modos?.[0]?.id ?? "";
+const tieneFecha = informe.campos.some((campo) => campo.id === "fecha");
+
+function opcionesDe(campo: Campo): string[] {
+	if (campo.catalogo) return nombresDe(campo.catalogo);
+	return campo.opciones ?? [];
+}
+
 const datos = {
 	informe: claveInforme(areaId, informe.id),
+	areaId,
 	area: areaTitulo,
 	titulo: informe.titulo,
+	pestana: informe.pestana,
+	documento: informe.documento,
 	campos: informe.campos,
 	alguno: informe.alguno ?? [],
 	algunoMensaje: informe.algunoMensaje ?? "",
+	modos: informe.modos ?? [],
+	cierre: informe.cierre ?? null,
+	litros: informe.litros ?? "",
+	saldo: informe.saldo ?? null,
 };
-const pestana = urlPestana(areaId);
+const datosJson = JSON.stringify(datos).replace(/</g, "\\u003c");
 ---
 
 <section class="informe" aria-labelledby="informe-titulo">
 	<h2 id="informe-titulo" class="sr-only">{informe.titulo}</h2>
-	<Periodo />
+	{!tieneFecha && <Periodo />}
+	<form class="clave" hidden>
+		<label>
+			Clave del área
+			<input name="pin" type="password" autocomplete="off" minlength="4" maxlength="12" />
+		</label>
+		<button type="submit">Usar clave</button>
+	</form>
+	{
+		informe.saldo && (
+			<label class="saldo-inicial">
+				Saldo anterior
+				<input type="number" inputmode="decimal" step="any" />
+				<span class="ayuda">Si el mes sigue al anterior, se toma el último saldo.</span>
+			</label>
+		)
+	}
 	<form class="carga-form">
 		{
+			informe.modos && informe.modos.length > 0 && (
+				<div class="modos" role="radiogroup" aria-label="Tipo de movimiento">
+					{informe.modos.map((modo, indice) => (
+						<label class="modo">
+							<input type="radio" name="__modo" value={modo.id} checked={indice === 0} />
+							{modo.etiqueta}
+						</label>
+					))}
+				</div>
+			)
+		}
+		{
 			informe.campos.map((campo) => {
-				if (campo.tipo === "marcas") {
-					return (
-						<fieldset>
-							<legend>{campo.etiqueta}</legend>
-							<div class="marcas">
-								{campo.opciones?.map((opcion) => (
-									<label class="marca">
-										<input type="checkbox" name={campo.id} value={opcion} />
-										{opcion}
-									</label>
+				const opciones = opcionesDe(campo);
+				const oculto = Boolean(campo.modos?.length) && !campo.modos?.includes(primerModo);
+				const exige =
+					campo.requerido === true &&
+					!oculto &&
+					campo.tipo !== "multiple" &&
+					campo.tipo !== "marcas" &&
+					campo.tipo !== "cantidades" &&
+					campo.tipo !== "calculado";
+				const conLista = campo.tipo === "texto" && Boolean(campo.sugerencias || campo.recordar);
+				return (
+					<div
+						class="campo"
+						data-campo={campo.id}
+						data-modos={campo.modos?.join(" ")}
+						data-defecto={campo.porDefecto}
+						data-conservar={campo.conservar ? "si" : undefined}
+						data-requerido={campo.requerido ? "si" : undefined}
+						hidden={oculto}
+					>
+						{campo.tipo === "marcas" || campo.tipo === "multiple" ? (
+							<fieldset>
+								<legend>{campo.etiqueta}</legend>
+								{campo.tipo === "multiple" && (
+									<input
+										class="filtro"
+										type="search"
+										placeholder="Buscar"
+										aria-label={`Buscar ${campo.etiqueta}`}
+										autocomplete="off"
+									/>
+								)}
+								<div class={campo.tipo === "multiple" && opciones.length > 8 ? "marcas desplazable" : "marcas"}>
+									{opciones.map((opcion) => (
+										<label class="marca" data-texto={opcion.toLowerCase()}>
+											<input type="checkbox" name={campo.id} value={opcion} disabled={oculto} />
+											{opcion}
+										</label>
+									))}
+								</div>
+							</fieldset>
+						) : campo.tipo === "cantidades" ? (
+							<fieldset>
+								<legend>{campo.etiqueta}</legend>
+								<div class="cantidades">
+									{opciones.map((opcion) => (
+										<div class="cantidad">
+											<span>{opcion}</span>
+											<button class="paso" type="button" data-delta="-1" aria-label={`Menos ${opcion}`}>
+												−
+											</button>
+											<input
+												name={campo.id}
+												data-opcion={opcion}
+												type="number"
+												min="0"
+												step="any"
+												value="0"
+												inputmode="decimal"
+												aria-label={opcion}
+												disabled={oculto}
+											/>
+											<button class="paso" type="button" data-delta="1" aria-label={`Más ${opcion}`}>
+												+
+											</button>
+										</div>
+									))}
+								</div>
+							</fieldset>
+						) : campo.tipo === "seleccion" || campo.tipo === "opciones" ? (
+							<label>
+								{campo.etiqueta}
+								<select
+									name={campo.id}
+									required={exige}
+									disabled={oculto}
+									data-catalogo={campo.catalogo}
+									data-completa={campo.completa ? JSON.stringify(campo.completa) : undefined}
+									data-sugiere={campo.sugiere ? JSON.stringify(campo.sugiere) : undefined}
+								>
+									<option value="">Elegir</option>
+									{opciones.map((opcion) => (
+										<option value={opcion} selected={opcion === campo.porDefecto}>
+											{opcion}
+										</option>
+									))}
+									{campo.tipo === "seleccion" && <option value="__otro__">Otro…</option>}
+								</select>
+							</label>
+						) : campo.tipo === "parrafo" ? (
+							<label>
+								{campo.etiqueta}
+								<textarea name={campo.id} rows="4" required={exige} disabled={oculto} />
+							</label>
+						) : (
+							<label>
+								{campo.etiqueta}
+								<input
+									name={campo.id}
+									type={campo.tipo === "fecha" ? "date" : campo.tipo === "numero" ? "number" : "text"}
+									required={exige}
+									disabled={oculto}
+									readonly={campo.tipo === "calculado"}
+									data-calculado={campo.tipo === "calculado" ? "si" : undefined}
+									min={campo.tipo === "numero" ? "0" : undefined}
+									step={campo.tipo === "numero" ? "any" : undefined}
+									inputmode={campo.tipo === "numero" || campo.tipo === "calculado" ? "decimal" : undefined}
+									autocapitalize={campo.id === "patente" ? "characters" : undefined}
+									list={conLista ? `lista-${campo.id}` : undefined}
+								/>
+							</label>
+						)}
+						{conLista && (
+							<datalist id={`lista-${campo.id}`}>
+								{campo.sugerencias && nombresDe(campo.sugerencias).map((opcion) => <option value={opcion} />)}
+							</datalist>
+						)}
+						{campo.tipo === "seleccion" && (
+							<input
+								name={`${campo.id}__otro`}
+								data-otro={campo.id}
+								type="text"
+								hidden
+								disabled
+								placeholder="Escribir"
+								aria-label={`${campo.etiqueta}, otro`}
+							/>
+						)}
+						{campo.atajos && campo.atajos.length > 0 && (
+							<div class="atajos">
+								{campo.atajos.map((atajo) => (
+									<button type="button" class="atajo" data-para={campo.id} data-modo={campo.atajo ?? "reemplazar"}>
+										{atajo}
+									</button>
 								))}
 							</div>
-						</fieldset>
-					);
-				}
-				if (campo.tipo === "opciones") {
-					return (
-						<label>
-							{campo.etiqueta}
-							<select name={campo.id} required={campo.requerido}>
-								<option value="">Elegir</option>
-								{campo.opciones?.map((opcion) => <option value={opcion}>{opcion}</option>)}
-							</select>
-						</label>
-					);
-				}
-				if (campo.tipo === "parrafo") {
-					return (
-						<label>
-							{campo.etiqueta}
-							<textarea name={campo.id} rows="4" required={campo.requerido}></textarea>
-						</label>
-					);
-				}
-				const type = campo.tipo === "fecha" ? "date" : campo.tipo === "numero" ? "number" : "text";
-				return (
-					<label>
-						{campo.etiqueta}
-						<input
-							name={campo.id}
-							type={type}
-							required={campo.requerido}
-							min={campo.tipo === "numero" ? "0" : undefined}
-							step={campo.tipo === "numero" ? "any" : undefined}
-							inputmode={campo.tipo === "numero" ? "decimal" : undefined}
-						/>
-					</label>
+						)}
+					</div>
 				);
 			})
 		}
 		<button class="agregar" type="submit">Agregar</button>
 	</form>
 	<p class="aviso" role="status" hidden></p>
-	<a class="planilla" href={pestana} target="_blank" rel="noopener noreferrer">Abrir pestaña de {areaTitulo} en la planilla</a>
+	<p class="resumen-mes" hidden></p>
+	<a class="planilla" href={PLANILLA_URL} target="_blank" rel="noopener noreferrer">Abrir la pestaña {informe.pestana}</a>
+	{informe.documento && <button class="generar" type="button">Generar informe del mes</button>}
+	{informe.cierre && <h2 class="pendientes-titulo" hidden>Pendientes</h2>}
+	{informe.cierre && <ul class="pendientes" hidden></ul>}
 	<h2 class="lista-titulo">Cargas</h2>
 	<p class="vacio">Todavía no hay cargas en este mes.</p>
 	<ul class="filas"></ul>
-	<script id="informe-datos" type="application/json" set:html={JSON.stringify(datos)}></script>
+	<script id="informe-datos" type="application/json" set:html={datosJson} />
 </section>
 
 <script>
-	import { guardarFilas, leerFilas } from "../lib/filas";
-	import { leerPeriodo, nombrePeriodo } from "../lib/periodo";
-	import { guardarEnPlanilla, PLANILLA_SCRIPT } from "../lib/planilla";
+	import { parseDatos } from "../data/informes";
+	import { iniciarInforme } from "../lib/iniciar-informe";
 
 	const section = document.querySelector(".informe");
-	const form = section?.querySelector(".carga-form");
-	const aviso = section?.querySelector(".aviso");
-	const vacio = section?.querySelector(".vacio");
-	const lista = section?.querySelector(".filas");
 	const datosEl = document.querySelector("#informe-datos");
-	if (
-		!(section instanceof HTMLElement) ||
-		!(form instanceof HTMLFormElement) ||
-		!(aviso instanceof HTMLElement) ||
-		!(vacio instanceof HTMLElement) ||
-		!(lista instanceof HTMLElement) ||
-		!(datosEl instanceof HTMLScriptElement)
-	) {
-		throw new Error("Falta el formulario del informe");
+	if (section instanceof HTMLElement && datosEl instanceof HTMLScriptElement) {
+		iniciarInforme(section, parseDatos(JSON.parse(datosEl.textContent || "{}")));
 	}
-
-	const schema = JSON.parse(datosEl.textContent || "{}");
-	const numero = new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 });
-	const fechaTxt = new Intl.DateTimeFormat("es-AR");
-
-	let periodo = leerPeriodo();
-	let filas = leerFilas(periodo, schema.informe);
-	let cola = Promise.resolve();
-
-	function limites(actual) {
-		const ultimo = new Date(actual.anio, actual.mes, 0).getDate();
-		const mes = String(actual.mes).padStart(2, "0");
-		return {
-			min: `${actual.anio}-${mes}-01`,
-			max: `${actual.anio}-${mes}-${String(ultimo).padStart(2, "0")}`,
-		};
-	}
-
-	function aplicarFechas() {
-		const rango = limites(periodo);
-		for (const campo of schema.campos) {
-			if (campo.tipo !== "fecha") continue;
-			const input = form.elements.namedItem(campo.id);
-			if (!(input instanceof HTMLInputElement)) continue;
-			input.min = rango.min;
-			input.max = rango.max;
-			if (input.value && (input.value < rango.min || input.value > rango.max)) input.value = "";
-		}
-	}
-
-	function presentar(campo, valor) {
-		if (campo.tipo === "fecha") {
-			const [anio, mes, dia] = valor.split("-").map(Number);
-			if (!anio || !mes || !dia) return valor;
-			return fechaTxt.format(new Date(anio, mes - 1, dia));
-		}
-		if (campo.tipo === "numero") {
-			const cantidad = Number(valor);
-			return Number.isFinite(cantidad) ? numero.format(cantidad) : valor;
-		}
-		return valor;
-	}
-
-	function mostrarAviso(texto) {
-		aviso.hidden = !texto;
-		aviso.textContent = texto;
-	}
-
-	function render() {
-		lista.replaceChildren();
-		vacio.hidden = filas.length > 0;
-		vacio.textContent = `Todavía no hay cargas de ${nombrePeriodo(periodo)}.`;
-		for (const fila of filas) {
-			const item = document.createElement("li");
-			item.className = "fila";
-			const detalle = document.createElement("dl");
-			for (const campo of schema.campos) {
-				const valor = fila.valores[campo.id];
-				if (!valor) continue;
-				const grupo = document.createElement("div");
-				const titulo = document.createElement("dt");
-				titulo.textContent = campo.etiqueta;
-				const dato = document.createElement("dd");
-				dato.textContent = presentar(campo, valor);
-				grupo.append(titulo, dato);
-				detalle.append(grupo);
-			}
-			const quitar = document.createElement("button");
-			quitar.type = "button";
-			quitar.className = "quitar";
-			quitar.textContent = "Quitar";
-			quitar.addEventListener("click", () => {
-				const quitada = fila;
-				const mes = periodo;
-				filas = filas.filter((actual) => actual.id !== quitada.id);
-				guardarFilas(mes, schema.informe, filas);
-				render();
-				publicar("quitar", quitada, mes);
-			});
-			item.append(detalle, quitar);
-			lista.append(item);
-		}
-	}
-
-	function leerValores() {
-		const data = new FormData(form);
-		const valores = {};
-		for (const campo of schema.campos) {
-			if (campo.tipo === "marcas") {
-				const marcados = data.getAll(campo.id).map(String).filter(Boolean);
-				if (marcados.length > 0) valores[campo.id] = marcados.join(", ");
-				continue;
-			}
-			const valor = String(data.get(campo.id) ?? "").trim();
-			if (valor) valores[campo.id] = valor;
-		}
-		return valores;
-	}
-
-	function camposDe(valores) {
-		const campos = [];
-		for (const campo of schema.campos) {
-			const valor = valores[campo.id];
-			if (!valor) continue;
-			if (campo.tipo === "numero") campos.push({ etiqueta: campo.etiqueta, valor: Number(valor) });
-			else if (campo.tipo === "fecha") campos.push({ etiqueta: campo.etiqueta, valor: presentar(campo, valor) });
-			else campos.push({ etiqueta: campo.etiqueta, valor });
-		}
-		return campos;
-	}
-
-	function publicar(accion, fila, mes) {
-		const envio = {
-			accion,
-			id: fila.id,
-			anio: mes.anio,
-			mes: mes.mes,
-			area: schema.area,
-			informe: schema.titulo,
-			campos: camposDe(fila.valores),
-		};
-		if (!PLANILLA_SCRIPT) {
-			mostrarAviso("Quedó en este dispositivo. Falta conectar la planilla.");
-			return;
-		}
-		mostrarAviso(accion === "quitar" ? "Quitando de la planilla…" : "Guardando en la planilla…");
-		cola = cola.then(async () => {
-			try {
-				await guardarEnPlanilla(envio);
-				if (periodo.anio === mes.anio && periodo.mes === mes.mes) {
-					mostrarAviso(
-						accion === "quitar"
-							? `Se quitó de la pestaña ${schema.area}.`
-							: `Guardada en la pestaña ${schema.area}.`,
-					);
-				}
-			} catch {
-				if (periodo.anio === mes.anio && periodo.mes === mes.mes) {
-					mostrarAviso("No se pudo guardar en la planilla. Quedó en este dispositivo.");
-				}
-			}
-		});
-	}
-
-	aplicarFechas();
-	render();
-
-	form.addEventListener("submit", (event) => {
-		event.preventDefault();
-		if (!form.reportValidity()) return;
-		const valores = leerValores();
-		const faltaAlguno =
-			schema.alguno.length > 0 && !schema.alguno.some((id) => valores[id]);
-		if (faltaAlguno) {
-			mostrarAviso(schema.algunoMensaje);
-			return;
-		}
-		mostrarAviso("");
-		const fila = { id: crypto.randomUUID(), valores };
-		const mes = periodo;
-		filas = [...filas, fila];
-		guardarFilas(mes, schema.informe, filas);
-		form.reset();
-		aplicarFechas();
-		render();
-		publicar("agregar", fila, mes);
-	});
-
-	window.addEventListener("informe-periodo", () => {
-		periodo = leerPeriodo();
-		filas = leerFilas(periodo, schema.informe);
-		mostrarAviso("");
-		aplicarFechas();
-		render();
-	});
 </script>
 
 <style>
@@ -297,24 +250,42 @@ const pestana = urlPestana(areaId);
 		border: 0;
 	}
 
+	[hidden] {
+		display: none !important;
+	}
+
 	.carga-form,
-	.filas {
+	.filas,
+	.pendientes,
+	.clave {
 		display: grid;
 		gap: 0.75rem;
 	}
 
-	.carga-form {
+	.carga-form,
+	.clave,
+	.saldo-inicial {
 		margin-bottom: 1.5rem;
 	}
 
+	.campo,
 	fieldset {
 		margin: 0;
 		padding: 0;
 		border: 0;
+		min-width: 0;
+	}
+
+	.campo,
+	label,
+	.saldo-inicial {
+		display: grid;
+		gap: 0.35rem;
 	}
 
 	legend,
-	.lista-titulo {
+	.lista-titulo,
+	.pendientes-titulo {
 		margin-bottom: 0.75rem;
 		padding: 0;
 		font-size: 1.15rem;
@@ -322,24 +293,69 @@ const pestana = urlPestana(areaId);
 		line-height: 1.2;
 	}
 
-	.lista-titulo {
+	.lista-titulo,
+	.pendientes-titulo {
 		margin-top: 0;
 	}
 
+	.pendientes-titulo {
+		margin-bottom: 0.75rem;
+	}
+
 	label,
-	.marca {
+	.marca,
+	.saldo-inicial {
 		font-size: 1rem;
 		font-weight: 650;
 	}
 
-	label {
+	.modos {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+	}
+
+	.modo {
+		position: relative;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 3rem;
+		padding: 0.5rem 0.75rem;
+		border: 1px solid var(--line);
+		border-radius: 999px;
+		background: #fff;
+		text-align: center;
+	}
+
+	.modo:has(input:checked) {
+		border-color: var(--primary);
+		background: var(--primary);
+	}
+
+	.modo input {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+	}
+
+	.modo:focus-within {
+		outline: 3px solid var(--forest);
+		outline-offset: 3px;
+	}
+
+	.marcas,
+	.cantidades {
 		display: grid;
 		gap: 0.35rem;
 	}
 
-	.marcas {
-		display: grid;
-		gap: 0.35rem;
+	.desplazable {
+		max-height: 18rem;
+		overflow: auto;
 	}
 
 	.marca {
@@ -356,6 +372,65 @@ const pestana = urlPestana(areaId);
 		accent-color: var(--forest);
 	}
 
+	.cantidad {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto auto auto;
+		gap: 0.5rem;
+		align-items: center;
+		min-height: 2.75rem;
+	}
+
+	.cantidad span {
+		overflow-wrap: anywhere;
+	}
+
+	.cantidad.con-valor {
+		padding: 0.25rem;
+		border-radius: 12px;
+		background: var(--soft);
+	}
+
+	.paso,
+	.atajo,
+	.agregar,
+	.quitar,
+	.repetir,
+	.generar,
+	.clave button {
+		min-height: 2.75rem;
+		border-radius: 999px;
+		font: inherit;
+		font-weight: 700;
+	}
+
+	.paso {
+		width: 2.75rem;
+		border: 1px solid var(--line);
+		background: #fff;
+		color: var(--ink);
+	}
+
+	.atajos {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+
+	.atajo,
+	.repetir,
+	.quitar,
+	.generar {
+		padding: 0.4rem 0.9rem;
+		border: 1px solid var(--primary);
+		background: #fff;
+		color: var(--ink);
+	}
+
+	.atajo {
+		background: var(--soft);
+		border-color: var(--line);
+	}
+
 	input,
 	select,
 	textarea {
@@ -370,13 +445,28 @@ const pestana = urlPestana(areaId);
 	}
 
 	input,
-	select {
+	select,
+	.clave button,
+	.agregar,
+	.generar {
 		min-height: 3rem;
+	}
+
+	.cantidad input {
+		width: 4.5rem;
+		min-height: 2.75rem;
+		padding-right: 0.25rem;
+		padding-left: 0.25rem;
+		text-align: center;
 	}
 
 	textarea {
 		min-height: 6.5rem;
 		resize: vertical;
+	}
+
+	input[readonly] {
+		background: var(--soft);
 	}
 
 	input:focus-visible,
@@ -388,30 +478,38 @@ const pestana = urlPestana(areaId);
 	}
 
 	.agregar,
-	.quitar {
-		min-height: 3rem;
-		border-radius: 999px;
-		font: inherit;
-		font-weight: 700;
-	}
-
-	.agregar {
+	.clave button {
 		border: 0;
 		background: var(--primary);
 		color: var(--ink);
 	}
 
 	.aviso,
-	.vacio {
+	.vacio,
+	.resumen-mes,
+	.ayuda {
 		margin: 0 0 0.75rem;
 		font-weight: 650;
+	}
+
+	.ayuda {
+		font-size: 0.9rem;
+		font-weight: 450;
+	}
+
+	.planilla,
+	.generar {
+		margin-bottom: 1.5rem;
+	}
+
+	.generar {
+		width: 100%;
 	}
 
 	.planilla {
 		display: inline-flex;
 		align-items: center;
 		min-height: 2.75rem;
-		margin-bottom: 1.5rem;
 		color: var(--accent, var(--forest));
 		font-weight: 700;
 		text-decoration: none;
@@ -422,8 +520,9 @@ const pestana = urlPestana(areaId);
 		outline-offset: 3px;
 	}
 
-	.filas {
-		margin: 0;
+	.filas,
+	.pendientes {
+		margin: 0 0 1.5rem;
 		padding: 0;
 		list-style: none;
 	}
@@ -454,15 +553,50 @@ const pestana = urlPestana(areaId);
 		font-weight: 650;
 	}
 
-	dd {
+	dd,
+	.fila p {
 		margin: 0;
 		overflow-wrap: anywhere;
 	}
 
-	.quitar {
-		padding: 0 0.9rem;
-		border: 1px solid var(--primary);
-		background: #fff;
-		color: var(--ink);
+	.acciones {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.5rem;
+	}
+
+	.estado {
+		justify-self: start;
+		padding: 0.15rem 0.65rem;
+		border-radius: 999px;
+		background: var(--soft);
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.estado.pendiente {
+		background: #f3ead2;
+	}
+
+	@media (hover: hover) and (pointer: fine) {
+		.agregar,
+		.atajo,
+		.paso,
+		.repetir,
+		.quitar,
+		.generar,
+		.clave button {
+			transition: transform 0.15s ease;
+		}
+
+		.agregar:hover,
+		.atajo:hover,
+		.paso:hover,
+		.repetir:hover,
+		.quitar:hover,
+		.generar:hover,
+		.clave button:hover {
+			transform: scale(1.02);
+		}
 	}
 </style>
